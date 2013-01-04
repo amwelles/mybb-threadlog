@@ -33,9 +33,9 @@ function threadlog_info()
 	return array(
 		"name"			=> "Threadlog",
 		"description"	=> "Creates dynamic threadlogs linked from each user's profile.",
-		"website"		=> "http://novembird.com/mybb/threadlog",
+		"website"		=> "https://github.com/amwelles/mybb-threadlog",
 		"author"		=> "Autumn Welles",
-		"authorsite"	=> "http://novembird.com",
+		"authorsite"	=> "http://novembird.com/mybb/",
 		"version"		=> "0.3",
 		"guid" 			=> "",
 		"compatibility" => "*"
