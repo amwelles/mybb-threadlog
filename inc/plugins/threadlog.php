@@ -36,7 +36,7 @@ function threadlog_info()
 		"website"		=> "https://github.com/amwelles/mybb-threadlog",
 		"author"		=> "Autumn Welles",
 		"authorsite"	=> "http://novembird.com/mybb/",
-		"version"		=> "0.3",
+		"version"		=> "0.4",
 		"guid" 			=> "",
 		"compatibility" => "*"
 	);
@@ -264,9 +264,21 @@ function threadlog_profile() {
 		if($mybb->settings['threadlog_dead'] != '') {
 			$dead = explode(",", $mybb->settings['threadlog_dead']);
 		}
+
+		if($topics != '' && isset($topics)) {
+			$foo = " AND tid IN ('". str_replace(',', '\',\'', $topics) ."')";
+		} else {
+			$foo = '';
+		}
+
+		if(($mybb->settings['threadlog_hidden']) != '' && isset($mybb->settings['threadlog_hidden'])) {
+			$bar = " AND fid NOT IN ('". str_replace(',', '\',\'', $mybb->settings['threadlog_hidden']) ."')";
+		} else {
+			$bar = '';
+		}
 		
 		// query the threads table for the active/archived/dead threads, excluding the hidden forums
-		$query = $db->simple_select("threads", "tid,fid,subject,lastpost,lastposter", "visible = '1' AND tid IN ('".$topics."') AND fid NOT IN ('".str_replace(',', '\',\'', $mybb->settings['threadlog_hidden'])."')");
+		$query = $db->simple_select("threads", "tid,fid,subject,lastpost,lastposter", "visible = '1'".$foo.$bar);
 		if($db->num_rows($query) < 1) {
 			eval("\$threads .= \"".$templates->get("threadlog_nothreads")."\";");
 		}
