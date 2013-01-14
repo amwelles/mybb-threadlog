@@ -36,7 +36,7 @@ function threadlog_info()
 		"website"		=> "https://github.com/amwelles/mybb-threadlog",
 		"author"		=> "Autumn Welles",
 		"authorsite"	=> "http://novembird.com/mybb/",
-		"version"		=> "0.4",
+		"version"		=> "0.4.1",
 		"guid" 			=> "",
 		"compatibility" => "*"
 	);
@@ -251,6 +251,7 @@ function threadlog_profile() {
 
 		// query the posts table for the threads a user is involved in
 		$query = $db->simple_select("posts", "DISTINCT tid", "uid = ".$uid."");
+		$topics = "";
 		while($row = $db->fetch_array($query)) {
 			$topics .= $row['tid'].",";
 		}
@@ -265,7 +266,7 @@ function threadlog_profile() {
 			$dead = explode(",", $mybb->settings['threadlog_dead']);
 		}
 
-		if($topics != '' && isset($topics)) {
+		if(isset($topics)) {
 			$foo = " AND tid IN ('". str_replace(',', '\',\'', $topics) ."')";
 		} else {
 			$foo = '';
