@@ -318,8 +318,8 @@ function threadlog_profile() {
 			// set up thread prefix, but only if we want it to
 			$prefix = '';
 			if($mybb->settings['threadlog_prefix'] == '1') {
-				$query = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
-				$prefix = $db->fetch_array($query);
+				$query2 = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
+				$prefix = $db->fetch_array($query2);
 				$prefix = $prefix['prefix'];
 			}
 
