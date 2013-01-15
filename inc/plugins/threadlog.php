@@ -36,7 +36,7 @@ function threadlog_info()
 		"website"		=> "https://github.com/amwelles/mybb-threadlog",
 		"author"		=> "Autumn Welles",
 		"authorsite"	=> "http://novembird.com/mybb/",
-		"version"		=> "0.4.1",
+		"version"		=> "0.5",
 		"guid" 			=> "",
 		"compatibility" => "*"
 	);
@@ -150,6 +150,19 @@ function threadlog_activate() {
 
 	$db->insert_query("settings", $setting2);
 
+	$setting3 = array(
+		"sid" => NULL,
+		"name" => "threadlog_prefix",
+		"title" => "Show thread prefix?",
+		"description" => "Choose \'yes\' to show the thread prefix (useful if you want to show location).",
+		"optionscode" => "yesno",
+		"value" => "0",
+		"disporder" => 4,
+		"gid" => $gid
+	);
+
+	$db->insert_query("settings", $setting3);
+
 	rebuild_settings();
 
 	// set up templates
@@ -189,7 +202,7 @@ display: none;
 	$template1 = array(
 		"tid" => NULL,
 		"title" => "threadlog_row",
-		"template" => $db->escape_string('<li class="{$class}">{$threadlink} <span class="lastposter">&mdash; Last post on {$lastpostdate} by {$lastposter}</span></li>'),
+		"template" => $db->escape_string('<li class="{$class}">{$prefix} {$threadlink} <span class="lastposter">&mdash; Last post on {$lastpostdate} by {$lastposter}</span></li>'),
 		"sid" => "-1"
 	);
 	$db->insert_query("templates", $template1);
@@ -216,7 +229,7 @@ function threadlog_deactivate() {
 	$db->delete_query("settinggroups", "name = 'threadlog'");
 
 	// remove settings
-	$db->delete_query("settings", 'name IN ( \'threadlog_hidden\',\'threadlog_archive\',\'threadlog_dead\' )');
+	$db->delete_query("settings", 'name IN ( \'threadlog_hidden\',\'threadlog_archive\',\'threadlog_dead\',\'threadlog_prefix\' )');
 
 	rebuild_settings();
 
@@ -279,7 +292,7 @@ function threadlog_profile() {
 		}
 		
 		// query the threads table for the active/archived/dead threads, excluding the hidden forums
-		$query = $db->simple_select("threads", "tid,fid,subject,lastpost,lastposter", "visible = '1'".$foo.$bar);
+		$query = $db->simple_select("threads", "tid,fid,subject,lastpost,lastposter,prefix", "visible = '1'".$foo.$bar);
 		if($db->num_rows($query) < 1) {
 			eval("\$threads .= \"".$templates->get("threadlog_nothreads")."\";");
 		}
@@ -301,6 +314,14 @@ function threadlog_profile() {
 
 			// set up last post date
 			$lastpostdate = date($mybb->settings['dateformat'], $thread['lastpost']);
+
+			// set up thread prefix, but only if we want it to
+			$prefix = '';
+			if($mybb->settings['threadlog_prefix'] == '1') {
+				$query = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
+				$prefix = $db->fetch_array($query);
+				$prefix = $prefix['prefix'];
+			}
 
 			eval("\$threads .= \"".$templates->get("threadlog_row")."\";");
 		
