@@ -245,7 +245,12 @@ function threadlog_deactivate() {
 function threadlog_profile() {
 	global $mybb, $lang, $db, $threadlog, $templates, $header, $footer, $headerinclude, $title, $theme;
 
-	$uid = intval($mybb->input['uid']);
+	if($mybb->input['uid'] != '') {
+		$uid = intval($mybb->input['uid']);
+	} else {
+		$uid = $mybb->user['uid'];
+	}
+
 	$userquery = $db->simple_select('users', 'username', 'uid = '.$uid.'');
 	$username = $db->fetch_field($userquery, 'username');
 
