@@ -36,7 +36,7 @@ function threadlog_info()
 		"website"		=> "https://github.com/amwelles/mybb-threadlog",
 		"author"		=> "Autumn Welles",
 		"authorsite"	=> "http://novembird.com/mybb/",
-		"version"		=> "0.5",
+		"version"		=> "0.6",
 		"guid" 			=> "",
 		"compatibility" => "*"
 	);
@@ -326,6 +326,13 @@ function threadlog_profile() {
 				$query2 = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
 				$prefix = $db->fetch_array($query2);
 				$prefix = $prefix['prefix'];
+			}
+
+			// set up xthreads, but only if it exists!
+			if($db->table_exists('threadfields_data')) {
+				$xthreads = '';
+				$query3 = $db->simple_select("threadfields_data", "*", "tid = ".$thread['tid']);
+				$xthreads = $db->fetch_array($query3);
 			}
 
 			eval("\$threads .= \"".$templates->get("threadlog_row")."\";");
