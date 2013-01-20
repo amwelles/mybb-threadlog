@@ -27,7 +27,7 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 	<dt>{$prefix}</dt>
 	<dd>outputs thread prefix</dd>
 	<dt>{$xthreads['field']}</dt>
-	<dd>outputs specified xthreads field (relies on [XThreads plugin](https://github.com/zingaburga/XThreads-MyBB-Plugin))</dd>
+	<dd>outputs specified xthreads field (relies on <a href="https://github.com/zingaburga/XThreads-MyBB-Plugin">XThreads plugin</a>)</dd>
 </dl>
 
 ## threadlog_nothreads
