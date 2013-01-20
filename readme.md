@@ -26,6 +26,8 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 	<dd>outputs plain text version of the last user to post</dd>
 	<dt>{$prefix}</dt>
 	<dd>outputs thread prefix</dd>
+	<dt>{$xthreads['field']</dt>
+	<dd>outputs specified xthreads field (relies on [XThreads plugin](https://github.com/zingaburga/XThreads-MyBB-Plugin))</dd>
 </dl>
 
 ## threadlog_nothreads
