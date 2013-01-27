@@ -36,7 +36,7 @@ function threadlog_info()
 		"website"		=> "https://github.com/amwelles/mybb-threadlog",
 		"author"		=> "Autumn Welles",
 		"authorsite"	=> "http://novembird.com/mybb/",
-		"version"		=> "0.6",
+		"version"		=> "0.7",
 		"guid" 			=> "",
 		"compatibility" => "*"
 	);
@@ -202,7 +202,7 @@ display: none;
 	$template1 = array(
 		"tid" => NULL,
 		"title" => "threadlog_row",
-		"template" => $db->escape_string('<li class="{$class}">{$prefix} {$threadlink} <span class="lastposter">&mdash; Last post on {$lastpostdate} by {$lastposter}</span></li>'),
+		"template" => $db->escape_string('<li class="{$class}">{$prefix} {$threadlink} <small>({$participants})</small> <span class="lastposter">&mdash; Last post on {$lastpostdate} by {$lastposter}</span></li>'),
 		"sid" => "-1"
 	);
 	$db->insert_query("templates", $template1);
@@ -303,13 +303,15 @@ function threadlog_profile() {
 		}
 		while($thread = $db->fetch_array($query)) {
 
+			$count_total++;
+
 			// set up classes for archived, dead, and active rows
 			if(isset($archived) && in_array($thread['fid'], $archived)) {
-				$class = 'archived'; }
+				$class = 'archived'; $count_archived++; }
 			elseif(isset($dead) && in_array($thread['fid'], $dead)) {
-				$class = 'dead'; }
+				$class = 'dead'; $count_dead++; }
 			else {
-				$class = 'active'; }
+				$class = 'active'; $count_active++; }
 
 			// set up thread link
 			$threadlink = '<a href="showthread.php?tid='.$thread['tid'].'">'.$thread['subject'].'</a>';
@@ -335,8 +337,44 @@ function threadlog_profile() {
 				$xthreads = $db->fetch_array($query3);
 			}
 
+			// set up skills/attributes, but only if it exists!
+			if($db->table_exists('usernotes')) {
+				$usernotes = '';
+				$query5 = $db->simple_select("usernotes", "*", "tid = ". $thread['tid'] ." AND uid = ".$uid);
+				$usernotes = $db->fetch_array($query5);
+			}
+
+			// set up participants
+			$participants = '';
+			$i = 0;
+			$query4 = $db->simple_select("posts", "DISTINCT username", "tid = ". $thread['tid'] ." AND username != '". $username ."'");
+			while($participant = $db->fetch_array($query4)) {
+				$i++;
+				if($i == 1) {
+					$participants .= $participant['username'];
+				} else {
+					$participants .= ', '.$participant['username'];
+				}
+			}
+
 			eval("\$threads .= \"".$templates->get("threadlog_row")."\";");
 		
+		}
+
+		if(!isset($count_dead)) {
+			$count_dead = 0;
+		}
+
+		if(!isset($count_active)) {
+			$count_active = 0;
+		}
+
+		if(!isset($count_archived)) {
+			$count_archived = 0;
+		}
+
+		if(!isset($count_total)) {
+			$count_total = 0;
 		}
 
 		eval("\$threadlog_page = \"".$templates->get("threadlog")."\";");
