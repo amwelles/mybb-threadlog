@@ -252,7 +252,7 @@ function threadlog_profile() {
 	}
 
 	$userquery = $db->simple_select('users', 'username', 'uid = '.$uid.'');
-	$username = $db->fetch_field($userquery, 'username');
+	$username = str_replace("'", "&#39;", $db->fetch_field($userquery, 'username'));
 
 	if($mybb->input['show'] == "threadlog") {
 
