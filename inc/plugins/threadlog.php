@@ -1,340 +1,272 @@
 <?php
 /**
- * MyBB 1.6
- * Copyright 2010 MyBB Group, All Rights Reserved
+ * Threadlog for MyBB 1.8
+ * Copyright (c) 2015 amwelles
+ * http://github.com/amwelles
  *
- * Website: http://mybb.com
- * License: http://mybb.com/about/license
- *
- * $Id$
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>
  */
- 
+
 // Disallow direct access to this file for security reasons
 if(!defined("IN_MYBB"))
 {
-	die("Direct initialization of this file is not allowed.<br /><br />Please make sure IN_MYBB is defined.");
+    die("Direct initialization of this file is not allowed.");
 }
 
-$plugins->add_hook("member_profile_start", "threadlog_profile");
 
 function threadlog_info()
 {
-	/**
-	 * Array of information about the plugin.
-	 * name: The name of the plugin
-	 * description: Description of what the plugin does
-	 * website: The website the plugin is maintained at (Optional)
-	 * author: The name of the author of the plugin
-	 * authorsite: The URL to the website of the author (Optional)
-	 * version: The version number of the plugin
-	 * guid: Unique ID issued by the MyBB Mods site for version checking
-	 * compatibility: A CSV list of MyBB versions supported. Ex, "121,123", "12*". Wildcards supported.
-	 */
-	return array(
-		"name"			=> "Threadlog",
-		"description"	=> "Creates dynamic threadlogs linked from each user's profile.",
-		"website"		=> "https://github.com/amwelles/mybb-threadlog",
-		"author"		=> "Autumn Welles",
-		"authorsite"	=> "http://novembird.com/mybb/",
-		"version"		=> "0.7",
-		"guid" 			=> "",
-		"compatibility" => "*"
-	);
+  return array(
+    "name"          => "Threadlog",
+    "description"   => "Creates a list of threads which the user has participated in.",
+    "website"       => "http://github.com/amwelles/mybb-threadlog",
+    "author"        => "Autumn Welles",
+    "authorsite"    => "http://github.com/amwelles",
+    "version"       => "2.0",
+    "guid"          => "",
+    "compatibility" => "*"
+  );
 }
 
-/**
- * ADDITIONAL PLUGIN INSTALL/UNINSTALL ROUTINES
- *
- * _install():
- *   Called whenever a plugin is installed by clicking the "Install" button in the plugin manager.
- *   If no install routine exists, the install button is not shown and it assumed any work will be
- *   performed in the _activate() routine.
- *
- * function hello_install()
- * {
- * }
- *
- * _is_installed():
- *   Called on the plugin management page to establish if a plugin is already installed or not.
- *   This should return TRUE if the plugin is installed (by checking tables, fields etc) or FALSE
- *   if the plugin is not installed.
- *
- * function hello_is_installed()
- * {
- *		global $db;
- *		if($db->table_exists("hello_world"))
- *  	{
- *  		return true;
- *		}
- *		return false;
- * }
- *
- * _uninstall():
- *    Called whenever a plugin is to be uninstalled. This should remove ALL traces of the plugin
- *    from the installation (tables etc). If it does not exist, uninstall button is not shown.
- *
- * function hello_uninstall()
- * {
- * }
- *
- * _activate():
- *    Called whenever a plugin is activated via the Admin CP. This should essentially make a plugin
- *    "visible" by adding templates/template changes, language changes etc.
- *
- * function hello_activate()
- * {
- * }
- *
- * _deactivate():
- *    Called whenever a plugin is deactivated. This should essentially "hide" the plugin from view
- *    by removing templates/template changes etc. It should not, however, remove any information
- *    such as tables, fields etc - that should be handled by an _uninstall routine. When a plugin is
- *    uninstalled, this routine will also be called before _uninstall() if the plugin is active.
- *
- * function hello_deactivate()
- * {
- * }
- */
-
-function threadlog_activate() {
-	global $db, $lang;
-
-	// create settings group
-	$settingarray = array(
-		'name' => 'threadlog',
-		'title' => 'Threadlog',
-		'description' => 'Settings for profile threadlogs.',
-		'disporder' => 100,
-		'isdefault' => 0
-	);
-
-	$gid = $db->insert_query("settinggroups", $settingarray);
-
-	// add settings
-	$setting0 = array(
-		"sid" => NULL,
-		"name" => "threadlog_hidden",
-		"title" => "Excluded Forums",
-		"description" => "Enter the forum IDs, separated by a comma, of forums that should be hidden on the threadlog. Leave blank to disable.",
-		"optionscode" => "text",
-		"value" => NULL,
-		"disporder" => 1,
-		"gid" => $gid
-	);
-
-	$db->insert_query("settings", $setting0);
-
-	$setting1 = array(
-		"sid" => NULL,
-		"name" => "threadlog_archive",
-		"title" => "Archive Forums",
-		"description" => "Enter the forum IDs, separated by a comma, of forums that are considered archive forums. Leave blank to disable.",
-		"optionscode" => "text",
-		"value" => NULL,
-		"disporder" => 2,
-		"gid" => $gid
-	);
-
-	$db->insert_query("settings", $setting1);
-
-	$setting2 = array(
-		"sid" => NULL,
-		"name" => "threadlog_dead",
-		"title" => "Dead Forums",
-		"description" => "Enter the forum IDs, separated by a comma, of forums that are considered dead thread forums. Leave blank to disable.",
-		"optionscode" => "text",
-		"value" => NULL,
-		"disporder" => 3,
-		"gid" => $gid
-	);
-
-	$db->insert_query("settings", $setting2);
-
-	$setting3 = array(
-		"sid" => NULL,
-		"name" => "threadlog_prefix",
-		"title" => "Show thread prefix?",
-		"description" => "Choose \'yes\' to show the thread prefix (useful if you want to show location).",
-		"optionscode" => "yesno",
-		"value" => "0",
-		"disporder" => 4,
-		"gid" => $gid
-	);
-
-	$db->insert_query("settings", $setting3);
-
-	rebuild_settings();
-
-	// set up templates
-	$template0 = array(
-		"tid" => NULL,
-		"title" => "threadlog",
-		"template" => $db->escape_string('<html>
-<head>
-<title>{$title}</title>
-{$headerinclude}
-<style>
-.active a:first-child {
-font-weight: bold;
-}
-.dead {
-text-decoration: line-through;
-}
-.dead .lastposter, .archived .lastposter {
-display: none;
-}
-</style>
-</head>
-<body>
-{$header}
-
-<ol>
-{$threads}
-</ol>
-
-{$footer}
-</body>
-</html>'),
-		"sid" => "-1"
-	);
-	$db->insert_query("templates", $template0);
-	
-	$template1 = array(
-		"tid" => NULL,
-		"title" => "threadlog_row",
-		"template" => $db->escape_string('<li class="{$class}">{$prefix} {$threadlink} <small>({$participants})</small> <span class="lastposter">&mdash; Last post on {$lastpostdate} by {$lastposter}</span></li>'),
-		"sid" => "-1"
-	);
-	$db->insert_query("templates", $template1);
-
-	$template2 = array(
-		"tid" => NULL,
-		"title" => "threadlog_nothreads",
-		"template" => $db->escape_string('<li class="none">No threads to speak of.</li>'),
-		"sid" => "-1"
-	);
-	$db->insert_query("templates", $template2);
-
-	// edit templates
-	require_once MYBB_ROOT.'inc/adminfunctions_templates.php';
-
-	// creates a link under online status
-	find_replace_templatesets('member_profile', '#'.preg_quote('{$online_status}').'#', '{$online_status}<br />'."\n".'<strong>Threadlog:</strong> <a href="member.php?action=profile&show=threadlog&uid={$uid}">Click me!</a>');
-}
-
-function threadlog_deactivate() {
+function threadlog_install()
+{
 	global $db, $mybb;
 
-	// delete settings group
-	$db->delete_query("settinggroups", "name = 'threadlog'");
+	// SETTINGS
 
-	// remove settings
-	$db->delete_query("settings", 'name IN ( \'threadlog_hidden\',\'threadlog_archive\',\'threadlog_dead\',\'threadlog_prefix\' )');
+	// make a settings group
+	$setting_group = array(
+		'name' => 'threadlog_settings',
+		'title' => 'Threadlog Settings',
+		'description' => 'Modify settings for the threadlog plugin.',
+		'disporder' => 5,
+		'isdefault' => 0,
+	);
 
-	rebuild_settings();
+	// get the settings group ID
+	$gid = $db->insert_query("settinggroups", $setting_group);
 
-	// delete templates
-	$db->delete_query('templates', 'title IN ( \'threadlog\',\'threadlog_row\',\'threadlog_nothreads\' )');
+	// define the settings
+	$settings_array = array(
+		'threadlog_forums' => array(
+			'title' => 'Included forums',
+			'description' => 'Add a comma-separated list of forum IDs to be included in the threadlog. (e.g. 4,8,10)',
+			'optionscode' => 'text',
+			'value' => '',
+			'disporder' => 1
+		),
+	);
 
-	// edit templates
-	require_once MYBB_ROOT.'inc/adminfunctions_templates.php';
-	find_replace_templatesets('member_profile', '#'.preg_quote('<br />'."\n".'<strong>Threadlog:</strong> <a href="member.php?action=profile&show=threadlog&uid={$uid}">Click me!</a>').'#', " ", 0);
-}
+	// add the settings
+	foreach($settings_array as $name => $setting)
+	{
+		$setting['name'] = $name;
+		$setting['gid'] = $gid;
 
-
-function threadlog_profile() {
-	global $mybb, $lang, $db, $threadlog, $templates, $header, $footer, $headerinclude, $title, $theme;
-
-	if($mybb->input['uid'] != '') {
-		$uid = intval($mybb->input['uid']);
-	} else {
-		$uid = $mybb->user['uid'];
+		$db->insert_query('settings', $setting);
 	}
 
-	$userquery = $db->simple_select('users', 'username', 'uid = '.$uid.'');
-	$username = str_replace("'", "&#39;", $db->fetch_field($userquery, 'username'));
+	// rebuild
+	rebuild_settings();
 
-	if($mybb->input['show'] == "threadlog") {
+	// TEMPLATES
 
-		global $threads, $bgcolor;
+	// define the page template
+	$threadlog_page = '<html>
+  <head>
+    <title>{$mybb->settings[\'bbname\']} - Threadlog</title>
+    {$headerinclude}
+  </head>
+  <body>
+    {$header}
+    <h1>Threadlog</h1>
+	
+		<ol>
+			{$threadlog_list}
+		</ol>
+	  
+    {$footer}
+    <script type="text/javascript" src="{$mybb->settings[\'bburl\']}/inc/plugins/threadlog/threadlog.js"></script>
+  </body>
+</html>';
 
-		$threads = '';
+	// create the page template
+	$insert_array = array(
+		'title' => 'threadlog_page',
+		'template' => $db->escape_string($threadlog_page),
+		'sid' => '-1',
+		'version' => '',
+		'dateline' => time(),
+	);
 
-		// add a title
-		$title = $lang->sprintf($mybb->settings['bbname'].' - Threadlog of '.$username.'');
-		
-		// add some breadcrumbs
-		add_breadcrumb("<a href='/member.php?action=profile&uid=". $uid ."'>Profile of ". $username ."</a>");
-		add_breadcrumb("Threadlog");
+	// insert the page template into DB
+	$db->insert_query('templates', $insert_array);
 
-		// query the posts table for the threads a user is involved in
+	// define the row template
+	$threadlog_row = '<li class="{$thread_status}">{$thread_title} {$thread_participants} {$thread_date}</li>';
+
+	// create the row template
+	$insert_array = array(
+		'title' => 'threadlog_row',
+		'template' => $db->escape_string($threadlog_row),
+		'sid' => '-1',
+		'version' => '',
+		'dateline' => time(),
+	);
+
+	// insert the list row into DB
+	$db->insert_query('templates', $insert_array);
+
+	// define the row template
+	$threadlog_nothreads = "<li>No threads to speak of.</li>";
+
+	// create the row template
+	$insert_array = array(
+		'title' => 'threadlog_nothreads',
+		'template' => $db->escape_string($threadlog_nothreads),
+		'sid' => '-1',
+		'version' => '',
+		'dateline' => time(),
+	);
+
+	// insert the list row into DB
+	$db->insert_query('templates', $insert_array);
+}
+
+// this is the main beef, right here
+$plugins->add_hook('misc_start', 'threadlog');
+
+function threadlog()
+{
+	global $mybb, $templates, $lang, $header, $headerinclude, $footer;
+
+	// show the threadlog when we call it
+	if($mybb->get_input('action') == 'threadlog')
+	{
+		global $mybb, $db, $templates;
+
+		// add the breadcrumb
+		add_breadcrumb('Threadlog', "misc.php?action=threadlog");
+
+		// check for a UID
+		if(isset($mybb->input['uid']))
+		{
+			$uid = intval($mybb->input['uid']);
+		}
+
+		// if no UID, show for the current user
+		else
+		{
+			$uid = $mybb->user['uid'];
+		}
+
+		// get the username and UID of current user
+		$userquery = $db->simple_select('users', 'username', 'uid = '. $uid .'');
+
+		// make sure single quotes are replaced so we don't muck up queries
+		$username = str_replace("'", "&#39;", $db->fetch_field($userquery, 'username'));
+
+		// set up this variable, idk why?
+		$threads = "";
+
+		// get threads that this user participated in
 		$query = $db->simple_select("posts", "DISTINCT tid", "uid = ".$uid."");
 		$topics = "";
-		while($row = $db->fetch_array($query)) {
-			$topics .= $row['tid'].",";
+		
+		// build our topic list
+		while($row = $db->fetch_array($query))
+		{
+			$topics .= $row['tid'] .",";
 		}
+
 		// remove last comma
 		$topics = substr_replace($topics, "", -1);
 
-		// set up archived forums array
-		if($mybb->settings['threadlog_archive'] != '') {
-			$archived = explode(",", $mybb->settings['threadlog_archive']);
+		// set up topics query
+		if(isset($topics))
+		{
+			$tids = " AND tid IN ('". str_replace(',', '\',\'', $topics) ."')";
 		}
-		if($mybb->settings['threadlog_dead'] != '') {
-			$dead = explode(",", $mybb->settings['threadlog_dead']);
-		}
-
-		if(isset($topics)) {
-			$foo = " AND tid IN ('". str_replace(',', '\',\'', $topics) ."')";
-		} else {
-			$foo = '';
+		else
+		{
+			$tids = "";
 		}
 
-		if(($mybb->settings['threadlog_hidden']) != '' && isset($mybb->settings['threadlog_hidden'])) {
-			$bar = " AND fid NOT IN ('". str_replace(',', '\',\'', $mybb->settings['threadlog_hidden']) ."')";
-		} else {
-			$bar = '';
+		// set up forums query
+		if(($mybb->settings['threadlog_forums'] != '') && isset($mybb->settings['threadlog_forums']))
+		{
+			$fids = " AND fid IN ('". str_replace(',', '\',\'', $mybb->settings['threadlog_forums']) ."')";
 		}
-		
-		// query the threads table for the active/archived/dead threads, excluding the hidden forums
-		$query = $db->simple_select("threads", "tid,fid,subject,lastpost,lastposter,prefix", "visible = '1'".$foo.$bar);
-		if($db->num_rows($query) < 1) {
-			eval("\$threads .= \"".$templates->get("threadlog_nothreads")."\";");
+		else
+		{
+			$fids = "";
 		}
-		while($thread = $db->fetch_array($query)) {
+
+		$count_total = 0;
+		$count_closed = 0;
+		$count_replies = 0;
+		$count_active = 0;
+
+		// final query
+		$query = $db->simple_select("threads", "tid,fid,subject,dateline,replies,lastpost,lastposter,lastposteruid,prefix,closed", "visible = 1".$tids.$fids);
+		if($db->num_rows($query) < 1)
+		{
+			eval("\$threadlog_list .= \"". $templates->get("threadlog_nothreads") ."\";");
+		}
+		while($thread = $db->fetch_array($query))
+		{
 
 			$count_total++;
 
-			// set up classes for archived, dead, and active rows
-			if(isset($archived) && in_array($thread['fid'], $archived)) {
-				$class = 'archived'; $count_archived++; }
-			elseif(isset($dead) && in_array($thread['fid'], $dead)) {
-				$class = 'dead'; $count_dead++; }
-			else {
-				$class = 'active'; $count_active++; }
-
-			// set up thread link
-			$threadlink = '<a href="showthread.php?tid='.$thread['tid'].'">'.$thread['subject'].'</a>';
-
-			// set up last poster
-			$lastposter = $thread['lastposter'];
-
-			// set up last post date
-			$lastpostdate = date($mybb->settings['dateformat'], $thread['lastpost']);
-
-			// set up thread prefix, but only if we want it to
-			$prefix = '';
-			if($mybb->settings['threadlog_prefix'] == '1') {
-				$query2 = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
-				$prefix = $db->fetch_array($query2);
-				$prefix = $prefix['prefix'];
+			// set up classes for active and closed threads
+			if($thread['closed'] == 1)
+			{
+				$thread_status = "closed";
+				$count_closed++;
+			}
+			if($thread['lastposteruid'] != $uid)
+			{
+				$thread_status = "needs-reply";
+				$count_replies++;
+			}
+			else
+			{
+				$thread_status = "active";
+				$count_active++;
 			}
 
-			// set up xthreads, but only if it exists!
-			if($db->table_exists('threadfields_data')) {
-				$xthreads = '';
-				$query3 = $db->simple_select("threadfields_data", "*", "tid = ".$thread['tid']);
-				$xthreads = $db->fetch_array($query3);
+			// set up thread link
+			$thread_title = "<a href=\"{$mybb->settings['bburl']}/showthread.php?tid=". $thread['tid'] ."\">". $thread['subject'] ."</a>";
+
+			// set up thread date
+			$thread_date = date($mybb->settings['dateformat'], $thread['dateline']);
+
+			// set up last poster
+			$thread_latest_poster = "<a href=\"{$mybb->settings['bburl']}/member.php?action=profile&uid=". $thread['lastposteruid'] ."\">". $thread['lastposter'] ."</a>";
+
+			// set up date of last post
+			$thread_latest_date = date($mybb->settings['dateformat'], $thread['lastpost']);
+
+			// set up thread prefix
+			$thread_prefix = '';
+			$query2 = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
+			$prefix = $db->fetch_array($query2);
+			if($thread['prefix'] != 0)
+			{
+				$thread_prefix = $prefix['prefix'];
+			}
+			else
+			{
+				$thread_prefix = "Unknown";
 			}
 
 			// set up skills/attributes, but only if it exists!
@@ -345,43 +277,67 @@ function threadlog_profile() {
 			}
 
 			// set up participants
-			$participants = '';
+			$thread_participants = '';
 			$i = 0;
 			$query4 = $db->simple_select("posts", "DISTINCT username", "tid = ". $thread['tid'] ." AND username != '". $username ."'");
 			while($participant = $db->fetch_array($query4)) {
 				$i++;
 				if($i == 1) {
-					$participants .= $participant['username'];
+					$thread_participants .= $participant['username'];
 				} else {
-					$participants .= ', '.$participant['username'];
+					$thread_participants .= ', '.$participant['username'];
 				}
 			}
 
-			eval("\$threads .= \"".$templates->get("threadlog_row")."\";");
-		
-		}
+			// add the row to the list
+			eval("\$threadlog_list .= \"".$templates->get("threadlog_row")."\";");
 
-		if(!isset($count_dead)) {
-			$count_dead = 0;
-		}
+		} // end while
 
-		if(!isset($count_active)) {
-			$count_active = 0;
-		}
-
-		if(!isset($count_archived)) {
-			$count_archived = 0;
-		}
-
-		if(!isset($count_total)) {
-			$count_total = 0;
-		}
-
-		eval("\$threadlog_page = \"".$templates->get("threadlog")."\";");
+		eval("\$threadlog_page = \"".$templates->get("threadlog_page")."\";");
 
 		output_page($threadlog_page);
 
 		exit;
-	}
+
+	} // end threadlog action
 }
-?>
+
+function threadlog_is_installed()
+{
+	global $mybb;
+
+	if(isset($mybb->settings['threadlog_forums']))
+	{
+		return true;
+	}
+
+	return false;
+}
+
+function threadlog_uninstall()
+{
+	global $db;
+
+	// delete settings
+	$db->delete_query('settings', "name IN ('threadlog_forums')");
+
+	// delete settings group
+	$db->delete_query('settinggroups', "name = 'threadlog_settings'");
+
+	// rebuild
+	rebuild_settings();
+
+	// delete templates
+	$db->delete_query("templates", "title IN ('threadlog_page','threadlog_row','threadlog_nothreads')");
+}
+
+function threadlog_activate()
+{
+
+}
+
+function threadlog_deactivate()
+{
+
+}
