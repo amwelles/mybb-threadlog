@@ -12,6 +12,9 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 	<dt>{$threadlog_list}</dt>
 	<dd>outputs either <code>threadlog_row</code> or <code>threadlog_nothreads</code></dd>
 
+	<dt>{$multipage}</dt>
+	<dd>outputs MyBB pager</dd>
+
 	<dt>{$count_total}</dt>
 	<dd>outputs total number of threads</dd>
 

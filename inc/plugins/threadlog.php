@@ -62,7 +62,14 @@ function threadlog_install()
 			'description' => 'Add a comma-separated list of forum IDs to be included in the threadlog. (e.g. 4,8,10)',
 			'optionscode' => 'text',
 			'value' => '',
-			'disporder' => 1
+			'disporder' => 1,
+		),
+		'threadlog_perpage' => array(
+			'title' => 'Threads per page',
+			'description' => 'Enter the number of threads that should display per page.',
+			'optionscode' => 'text',
+			'value' => 50,
+			'disporder' => 2,
 		),
 	);
 
@@ -83,16 +90,20 @@ function threadlog_install()
 	// define the page template
 	$threadlog_page = '<html>
   <head>
-    <title>{$mybb->settings[\'bbname\']} - Threadlog</title>
+    <title>{$mybb->settings[\'bbname\']} - {$username}\'s Threadlog</title>
     {$headerinclude}
   </head>
   <body>
     {$header}
-    <h1>Threadlog</h1>
+    <h1>{$username}\'s Threadlog</h1>
+
+    {$multipage}
 	
-		<ol>
+		<ul id="threadlog">
 			{$threadlog_list}
-		</ol>
+		</ul>
+
+    {$multipage}
 	  
     {$footer}
     <script type="text/javascript" src="{$mybb->settings[\'bburl\']}/inc/plugins/threadlog/threadlog.js"></script>
@@ -112,7 +123,8 @@ function threadlog_install()
 	$db->insert_query('templates', $insert_array);
 
 	// define the row template
-	$threadlog_row = '<li class="{$thread_status}">{$thread_title} {$thread_participants} {$thread_date}</li>';
+	$threadlog_row = '<li class="{$thread_status}">{$thread_title} with {$thread_participants} on {$thread_date}<br>
+	<span class="meta">Last post by {$thread_latest_poster} on {$thread_latest_date}</span></li>';
 
 	// create the row template
 	$insert_array = array(
@@ -154,8 +166,7 @@ function threadlog()
 	{
 		global $mybb, $db, $templates;
 
-		// add the breadcrumb
-		add_breadcrumb('Threadlog', "misc.php?action=threadlog");
+		$templatelist = "multipage,multipage_end,multipage_jump_page,multipage_nextpage,multipage_page,multipage_page_current,multipage_page_link_current,multipage_prevpage,multipage_start";
 
 		// check for a UID
 		if(isset($mybb->input['uid']))
@@ -163,10 +174,15 @@ function threadlog()
 			$uid = intval($mybb->input['uid']);
 		}
 
-		// if no UID, show for the current user
-		else
+		// if no UID, show logged in user
+		elseif(isset($mybb->user['uid']))
 		{
 			$uid = $mybb->user['uid'];
+		}
+
+		else
+		{
+			exit;
 		}
 
 		// get the username and UID of current user
@@ -174,6 +190,9 @@ function threadlog()
 
 		// make sure single quotes are replaced so we don't muck up queries
 		$username = str_replace("'", "&#39;", $db->fetch_field($userquery, 'username'));
+
+		// add the breadcrumb
+		add_breadcrumb($username .'\'s Threadlog', "misc.php?action=threadlog");
 
 		// set up this variable, idk why?
 		$threads = "";
@@ -216,8 +235,29 @@ function threadlog()
 		$count_replies = 0;
 		$count_active = 0;
 
+		// set up the pager
+		$threadlog_url = htmlspecialchars_uni("misc.php?action=threadlog&uid=". $uid);
+
+		$per_page = intval($mybb->settings['threadlog_perpage']);
+
+		$page = $mybb->get_input('page', MyBB::INPUT_INT);
+		if($page && $page > 0)
+		{
+			$start = ($page - 1) * $per_page;
+		}
+		else
+		{
+			$start = 0;
+			$page = 1;
+		}
+
+		$query = $db->simple_select("threads", "COUNT(*) AS threads", "visible = 1". $tids . $fids);
+		$threadlog_total = $db->fetch_field($query, "threads");
+
+		$multipage = multipage($threadlog_total, $per_page, $page, $threadlog_url);
+
 		// final query
-		$query = $db->simple_select("threads", "tid,fid,subject,dateline,replies,lastpost,lastposter,lastposteruid,prefix,closed", "visible = 1".$tids.$fids);
+		$query = $db->simple_select("threads", "tid,fid,subject,dateline,replies,lastpost,lastposter,lastposteruid,prefix,closed", "visible = 1". $tids . $fids ." LIMIT ". $start .", ". $per_page);
 		if($db->num_rows($query) < 1)
 		{
 			eval("\$threadlog_list .= \"". $templates->get("threadlog_nothreads") ."\";");
@@ -277,15 +317,15 @@ function threadlog()
 			}
 
 			// set up participants
-			$thread_participants = '';
+			$thread_participants = 'no other participants';
 			$i = 0;
-			$query4 = $db->simple_select("posts", "DISTINCT username", "tid = ". $thread['tid'] ." AND username != '". $username ."'");
+			$query4 = $db->simple_select("posts", "DISTINCT uid, username", "tid = ". $thread['tid'] ." AND uid != '". $uid ."'");
 			while($participant = $db->fetch_array($query4)) {
 				$i++;
 				if($i == 1) {
-					$thread_participants .= $participant['username'];
+					$thread_participants = "<a href=\"{$mybb->settings['bburl']}/member.php?action=profile&uid=". $participant['uid'] ."\">". $participant['username'] ."</a>";
 				} else {
-					$thread_participants .= ', '.$participant['username'];
+					$thread_participants .= ", <a href=\"{$mybb->settings['bburl']}/member.php?action=profile&uid=". $participant['uid'] ."\">". $participant['username'] ."</a>";
 				}
 			}
 
@@ -320,7 +360,7 @@ function threadlog_uninstall()
 	global $db;
 
 	// delete settings
-	$db->delete_query('settings', "name IN ('threadlog_forums')");
+	$db->delete_query('settings', "name IN ('threadlog_forums','threadlog_perpage')");
 
 	// delete settings group
 	$db->delete_query('settinggroups', "name = 'threadlog_settings'");
