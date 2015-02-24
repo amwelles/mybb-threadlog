@@ -67,4 +67,3 @@ This template has no variables.
 # Todo
 
 - [ ] Javascript sort by which need replies
-- [ ] Pagination
