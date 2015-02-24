@@ -2,7 +2,7 @@
 
 In case you lose the link for some reason, threadlogs can be accessed with the following link (sub UID with the user ID you'd like to view):
 
-	<a href="misc.php?action=profile&uid=UID">Click me!</a>
+	<a href="misc.php?action=threadlog&uid=UID">Click me!</a>
 
 # Template Variables
 
