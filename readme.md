@@ -11,6 +11,18 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 <dl>
 	<dt>{$threadlog_list}</dt>
 	<dd>outputs either <code>threadlog_row</code> or <code>threadlog_nothreads</code></dd>
+
+	<dt>{$count_total}</dt>
+	<dd>outputs total number of threads</dd>
+
+	<dt>{$count_closed}</dt>
+	<dd>outputs number of closed threads</dd>
+
+	<dt>{$count_replies}</dt>
+	<dd>outputs number of threads awaiting a reply from specified user</dd>
+
+	<dt>{$count_active}</dt>
+	<dd>outputs number of active threads</dd>
 </dl>
 
 ## threadlog_row
