@@ -335,21 +335,24 @@ function threadlog()
                 $thread_row = "trow1";
             }
 
-            // set up classes for active and closed threads
+            // set up classes for active, needs reply, and closed threads
             if($thread['closed'] == 1)
             {
                 $thread_status = "closed";
                 $count_closed++;
             }
-            if($thread['lastposteruid'] != $uid)
-            {
-                $thread_status = "needs-reply";
-                $count_replies++;
-            }
             else
             {
-                $thread_status = "active";
                 $count_active++;
+                $thread_status = "active";
+
+                // print($thread['lastposteruid']); print $uid; die();
+
+                if($thread['lastposteruid'] != $uid)
+                {
+                    $thread_status .= " needs-reply";
+                    $count_replies++;
+                }
             }
 
             // set up thread link
