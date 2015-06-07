@@ -26,6 +26,9 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 
 	<dt>{$count_active}</dt>
 	<dd>outputs number of active threads</dd>
+	
+	<dt>{$uid}</dt>
+	<dd>outputs user ID</dd>
 </dl>
 
 ## threadlog_row
@@ -51,6 +54,12 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 
 	<dt>{$thread_prefix}</dt>
 	<dd>outputs prefix of thread</dd>
+	
+	<dt>{$thread_posts}</dt>
+	<dd>outputs number of posts in this thread</dd>
+	
+	<dt>{$tid}</dt>
+	<dd>outputs thread ID</dd>
 </dl>
 
 ## threadlog_nothreads
