@@ -95,10 +95,10 @@ function threadlog_install()
             </tbody>
             <tfoot>
                 <tr><td class="tfoot" colspan="4" align="center">
-                {$count_total} total &middot;
                 {$count_active} active &middot;
                 {$count_closed} closed &middot;
-                {$count_replies} need replies
+                {$count_replies} need replies &middot;
+                {$count_total} total
                 </td></tr>
             </tfoot>
         </table>
