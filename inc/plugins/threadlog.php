@@ -90,7 +90,17 @@ function threadlog_install()
                     <td class="tcat" align="right">Last Post</td>
                 </tr>
             </thead>
-            {$threadlog_list}
+            <tbody>
+                {$threadlog_list}
+            </tbody>
+            <tfoot>
+                <tr><td class="tfoot" colspan="4" align="center">
+                {$count_total} total &middot;
+                {$count_active} active &middot;
+                {$count_closed} closed &middot;
+                {$count_replies} need replies
+                </td></tr>
+            </tfoot>
         </table>
 
     {$multipage}
