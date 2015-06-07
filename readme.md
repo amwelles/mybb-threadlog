@@ -1,8 +1,19 @@
+# Setup
+
+By default, this plugin will look in all forums and list out all threads a user has participated in. To narrow it down, you'll need to follow these steps:
+
+1. Log in to the MyBB Admin CP.
+2. Navigate to the forum you'd like to include.
+3. Click "Edit Forum Settings."
+4. Check off the box below "Display Order" labeled "Include in threadlog?"  
+    ![](http://i.imgur.com/ORIkISn.png)
+5. Click "Save Forum."
+
 # Accessing the threadlog
 
 In case you lose the link for some reason, threadlogs can be accessed with the following link (sub UID with the user ID you'd like to view):
 
-	<a href="misc.php?action=threadlog&uid=UID">Click me!</a>
+	<a href="{$mybb->settings['bburl']}/misc.php?action=threadlog&uid=UID">Click me!</a>
 
 # Template Variables
 
@@ -26,6 +37,9 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 
 	<dt>{$count_active}</dt>
 	<dd>outputs number of active threads</dd>
+	
+	<dt>{$uid}</dt>
+	<dd>outputs user ID</dd>
 </dl>
 
 ## threadlog_row
@@ -51,6 +65,12 @@ In case you lose the link for some reason, threadlogs can be accessed with the f
 
 	<dt>{$thread_prefix}</dt>
 	<dd>outputs prefix of thread</dd>
+	
+	<dt>{$thread_posts}</dt>
+	<dd>outputs number of posts in this thread</dd>
+	
+	<dt>{$tid}</dt>
+	<dd>outputs thread ID</dd>
 </dl>
 
 ## threadlog_nothreads
