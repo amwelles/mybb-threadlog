@@ -123,7 +123,7 @@ function threadlog_install()
     $db->insert_query('templates', $insert_array);
 
     // define the row template
-    $threadlog_row = '<tr class="{$thread_status}"><td class="{$thread_row}">{$thread_title}<div class="smalltext">on {$thread_date}</small></td>
+    $threadlog_row = '<tr class="{$thread_status}"><td class="{$thread_row}">{$thread_prefix} {$thread_title}<div class="smalltext">on {$thread_date}</small></td>
     <td class="{$thread_row}" align="center">{$thread_participants}</td>
     <td class="{$thread_row}" align="center"><a href="javascript:MyBB.whoPosted({$tid});">{$thread_posts}</a></td>
     <td class="{$thread_row}" align="right">Last post by {$thread_latest_poster}<div class="smalltext">on {$thread_latest_date}</div></td></tr>';
@@ -373,15 +373,11 @@ function threadlog()
 
             // set up thread prefix
             $thread_prefix = '';
-            $query2 = $db->simple_select("threadprefixes", "prefix", "pid = ".$thread['prefix']);
+            $query2 = $db->simple_select("threadprefixes", "displaystyle", "pid = ".$thread['prefix']);
             $prefix = $db->fetch_array($query2);
             if($thread['prefix'] != 0)
             {
-                $thread_prefix = $prefix['prefix'];
-            }
-            else
-            {
-                $thread_prefix = "Unknown";
+                $thread_prefix = $prefix['displaystyle'];
             }
 
             // set up skills/attributes, but only if it exists!
