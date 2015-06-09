@@ -310,7 +310,7 @@ function threadlog()
         $multipage = multipage($threadlog_total, $per_page, $page, $threadlog_url);
 
         // final query
-        $query = $db->simple_select("threads", "tid,fid,subject,dateline,replies,lastpost,lastposter,lastposteruid,prefix,closed", "visible = 1". $tids . $forum_select ." LIMIT ". $start .", ". $per_page);
+        $query = $db->simple_select("threads", "tid,fid,subject,dateline,replies,lastpost,lastposter,lastposteruid,prefix,closed", "visible = 1". $tids . $forum_select ." ORDER BY `tid` DESC LIMIT ". $start .", ". $per_page);
         if($db->num_rows($query) < 1)
         {
             eval("\$threadlog_list .= \"". $templates->get("threadlog_nothreads") ."\";");
