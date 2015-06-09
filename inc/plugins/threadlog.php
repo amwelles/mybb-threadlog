@@ -283,11 +283,6 @@ function threadlog()
             $forum_select = " AND fid IN(". $fids .")";
         }
 
-        $count_total = 0;
-        $count_closed = 0;
-        $count_replies = 0;
-        $count_active = 0;
-
         // set up the pager
         $threadlog_url = htmlspecialchars_uni("misc.php?action=threadlog&uid=". $uid);
 
@@ -304,10 +299,22 @@ function threadlog()
             $page = 1;
         }
 
+        $page_total = 0;
+
         $query = $db->simple_select("threads", "COUNT(*) AS threads", "visible = 1". $tids . $forum_select);
         $threadlog_total = $db->fetch_field($query, "threads");
+        $count_total = $threadlog_total; // getting the total here, since it's convenient
 
         $multipage = multipage($threadlog_total, $per_page, $page, $threadlog_url);
+
+        // get replies total
+        $query = $db->simple_select("threads", "tid", "visible = 1 AND `lastposteruid` != ". $uid . $tids . $forum_select);
+        $count_replies = $db->num_rows($query);
+
+        // get active & closed total
+        $query = $db->simple_select("threads", "tid", "visible = 1 AND `closed` = 1". $tids . $forum_select);
+        $count_closed = $db->num_rows($query);
+        $count_active = $count_total - $count_closed;
 
         // final query
         $query = $db->simple_select("threads", "tid,fid,subject,dateline,replies,lastpost,lastposter,lastposteruid,prefix,closed", "visible = 1". $tids . $forum_select ." ORDER BY `tid` DESC LIMIT ". $start .", ". $per_page);
@@ -318,7 +325,7 @@ function threadlog()
         while($thread = $db->fetch_array($query))
         {
 
-            $count_total++;
+            $page_total++;
 
             $tid = $thread['tid'];
 
@@ -326,7 +333,7 @@ function threadlog()
             $thread_posts = $db->num_rows($posts_query);
 
             // set up row styles
-            if($count_total % 2)
+            if($page_total % 2)
             {
                 $thread_row = "trow2";
             }
@@ -339,11 +346,9 @@ function threadlog()
             if($thread['closed'] == 1)
             {
                 $thread_status = "closed";
-                $count_closed++;
             }
             else
             {
-                $count_active++;
                 $thread_status = "active";
 
                 // print($thread['lastposteruid']); print $uid; die();
@@ -351,7 +356,6 @@ function threadlog()
                 if($thread['lastposteruid'] != $uid)
                 {
                     $thread_status .= " needs-reply";
-                    $count_replies++;
                 }
             }
 
