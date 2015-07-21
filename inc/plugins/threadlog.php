@@ -308,7 +308,7 @@ function threadlog()
         $multipage = multipage($threadlog_total, $per_page, $page, $threadlog_url);
 
         // get replies total
-        $query = $db->simple_select("threads", "tid", "visible = 1 AND `lastposteruid` != ". $uid . $tids . $forum_select);
+        $query = $db->simple_select("threads", "tid", "visible = 1 AND `closed` != 1 AND `lastposteruid` != ". $uid . $tids . $forum_select);
         $count_replies = $db->num_rows($query);
 
         // get active & closed total
