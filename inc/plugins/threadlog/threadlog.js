@@ -1,3 +1,4 @@
+/* authored by Autumn Welles <http://autumnwelles.com/> */
 jQuery(document).ready(function ($) {
 
 	$('#active').on('click', function(e) {
