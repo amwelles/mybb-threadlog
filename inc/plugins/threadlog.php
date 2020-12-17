@@ -17,7 +17,7 @@ function threadlog_info()
         "authorsite"    => "http://autumnwelles.com/",
         "version"       => "3.0",
         "guid"          => "",
-        "codename"      => "threadlog",
+        "codename"      => "threadlog+",
         "compatibility" => "18*"
     );
 }
@@ -29,6 +29,17 @@ function threadlog_install()
     // alter the forum table
     $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` ADD `threadlog_include` TINYINT( 1 ) NOT NULL DEFAULT '0'");
 
+    // add table for threadlog entries per user
+    // $db->write_query("CREATE TABLE `". $db->table_prefix ."threadlogentry` (
+    //     eid INT(10) UNSIGNED NOT NULL auto_increment,
+    //     tid INT(10) UNSIGNED NOT NULL DEFAULT 0,
+    //     uid INT(10) UNSIGNED NOT NULL DEFAULT 0,
+    //     roworder INT(7) UNSIGNED NOT NULL DEFAULT 0,
+    //     description TEXT,
+    //     KEY(tid),
+    //     KEY(uid),
+    //     PRIMARY KEY(eid)
+    // )");
     // SETTINGS
 
     // make a settings group
@@ -69,15 +80,15 @@ function threadlog_install()
 
     // define the page template
     $threadlog_page = '<html>
-  <head>
+<head>
     <title>{$mybb->settings[\'bbname\']} - {$username}\'s Threadlog</title>
     {$headerinclude}
-  </head>
-  <body>
+    </head>
+<body>
     {$header}
 
     {$multipage}
-    
+
         <table id="threadlog" class="tborder" border="0" cellpadding="{$theme[\'tablespace\']}" cellspacing="{$theme[\'borderwidth\']}">
             <thead>
                 <tr>
@@ -104,10 +115,10 @@ function threadlog_install()
         </table>
 
     {$multipage}
-      
+
     {$footer}
     <script type="text/javascript" src="{$mybb->settings[\'bburl\']}/inc/plugins/threadlog/threadlog.js"></script>
-  </body>
+</body>
 </html>';
 
     // create the page template
@@ -170,6 +181,8 @@ function threadlog_is_installed()
 function threadlog_uninstall()
 {
     global $db;
+
+    // $db->drop_table("`". $db->table_prefix ."threadlogentry`");
 
     // delete forum option
     $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` DROP `threadlog_include`;");
@@ -243,7 +256,7 @@ function threadlog()
         // get threads that this user participated in
         $query = $db->simple_select("posts", "DISTINCT tid", "uid = ".$uid."");
         $topics = "";
-        
+
         // build our topic list
         while($row = $db->fetch_array($query))
         {
