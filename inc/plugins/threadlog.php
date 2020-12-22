@@ -466,7 +466,7 @@ function threadlog() {
     $multipage = multipage($count_total, $per_page, $page, $threadlog_url);
 
     // get the entries
-    $query = $db->write_query("SELECT e.*,t.username,t.subject,p.displaystyle,t.dateline,t.replies,t.views,t.lastpost,t.lastposter,t.lastposteruid,t.prefix,t.closed
+    $query = $db->write_query("SELECT e.eid,e.uid,e.tid,e.roworder,t.username,t.subject,p.displaystyle,t.dateline,t.replies,t.views,t.lastpost,t.lastposter,t.lastposteruid,t.prefix,t.closed
         from `{$db->table_prefix}threadlogentry` as e
         left join `{$db->table_prefix}threads` as t on t.tid=e.tid
         left join `{$db->table_prefix}threadprefixes` as p on p.pid = t.prefix
@@ -474,7 +474,7 @@ function threadlog() {
         where e.uid={$uid} and f.threadlog_include=1 and t.visible
         ORDER BY e.roworder LIMIT ". $start .", ". $per_page);
 
-     // thread reorder script
+    // thread reorder script
     $reorderscript = '';
     if ($mybb->user['uid'] === $uid && intval($mybb->settings['threadlog_reorder']) === 1) {
         $threadlog_columns = '5';
