@@ -39,10 +39,15 @@ const forceCellWidths = (_, ui) => {
 const onReorderSelectChange = (e) => {
   if (e.target.value === '') return;
   $entryRow = $(e.target).closest('[data-entry]');
-  console.log(e.target.value, $entryRow.data('entry'));
+  let firstOrLast = null;
+  if (!$entryRow.prev() && direction === 'up') {
+    firstOrLast = true;
+  } else if (!$entryRow.next() && direction === 'down') {
+    firstOrLast = true;
+  }
   $.ajax({
     type: 'POST',
-    url: 'xmlhttp.php?action=threadlog&reorder=single',
+    url: `xmlhttp.php?action=threadlog&reorder=single${firstOrLast ? '&template=' + $direction : ''}`,
     dataType: 'json',
     data: {
       ajax: 1,
@@ -50,13 +55,31 @@ const onReorderSelectChange = (e) => {
       entry: $entryRow.data('entry')
     }
   }).done((res) => {
+    const direction = e.target.value;
     $(e.target).val('');
     // if this item was the first in the list and moved up OR
     // if this item was the last in the list and moved down
-    if ((!$entryRow.prev() && e.target.value === 'up') || (!$entryRow.next() && e.target.value === 'down')) {
+    if (firstOrLast) {
       // replace the data in this row with the response data we got back
       $entryRow.parent().append(unescape(res));
       $entryRow.remove();
+    } else {
+      let $swap = null;
+      // swap them
+      if (direction === 'up') {
+        $swap = $entryRow.prev();
+        // swap the elements
+        $entryRow.after($swap);
+      } else {
+        $swap = $entryRow.next();
+        // if a move up option doesn't exist, add it
+        $entryRow.before($swap);
+      }
+      // swap the options too
+      const $optionsTarget = $(e.target).children();
+      const $optionsSwap = $swap.find('select.threadrow-reorder option');
+      $optionsSwap.parent().html($optionsTarget.clone());
+      $optionsTarget.parent().html($optionsSwap.clone());
     }
   }).fail((res, status, err) => console.error(res, status, err));
 };

@@ -481,7 +481,7 @@ function threadlog() {
         $actions_header = '<td class="tcat" align="right">Actions</td>';
         $reorderscript = "<script type=\"text/javascript\" src=\"{$mybb->settings['bburl']}/inc/plugins/threadlog/jquery-ui.min.js\"></script>".
         "<script type=\"text/javascript\" src=\"{$mybb->settings['bburl']}/inc/plugins/threadlog/threadlog-reorder.js\"></script>";
-        $threadlog_buttons = "<div class=\"postbit_buttons\"><a href=\"#\" id=\"edit-threadlog-btn\">Edit</a><a href=\"#\" id=\"save-threadlog-btn\" style=\"display: none\">Save</a><a href=\"#\" id=\"cancel-threadlog-btn\" style=\"display: none\">Cancel</a></div>";
+        $threadlog_buttons = " <div class=\"postbit_buttons\"><a href=\"#\" id=\"edit-threadlog-btn\">Edit</a><a href=\"#\" id=\"save-threadlog-btn\" style=\"display: none\">Save</a><a href=\"#\" id=\"cancel-threadlog-btn\" style=\"display: none\">Cancel</a></div>";
     } else {
         $threadlog_columns = '4';
     }
@@ -598,7 +598,7 @@ function json_threadlog_reorder() {
             LEFT JOIN `{$db->table_prefix}forums` as f on f.fid=t.fid
             WHERE t.visible=1 and f.threadlog_include=1 and roworder ".($direction === 'up' ? '<' : '>')."
                 (SELECT roworder from `{$db->table_prefix}threadlogentry` WHERE eid={$eid})
-            ORDER BY roworder
+            ORDER BY roworder ".($direction === 'up' ? 'DESC' : 'ASC')."
             LIMIT 1");
         // todo: this is triggering, check the query above
         // don't let the user try to move the first or last one up/down
@@ -606,12 +606,13 @@ function json_threadlog_reorder() {
 
         $entry_to_swap = $db->fetch_array($query);
         $current_roworder = $direction === 'up' ? $entry_to_swap['roworder'] + 1 : $entry_to_swap['roworder'] - 1;
+        //json_response(400, "({$eid}, {$entry_to_swap['roworder']}), ({$entry_to_swap['eid']}, $current_roworder)");
 
         // perform the swap
         $db->write_query("INSERT into `{$db->table_prefix}threadlogentry` (eid, roworder)
             VALUES ({$eid}, {$entry_to_swap['roworder']}), ({$entry_to_swap['eid']}, $current_roworder) ON DUPLICATE KEY UPDATE roworder=VALUES(roworder)");
         // did the API request ask for a new template?
-        if ($mybb->input['first'] || $mybb->input['last']) {
+        if ($mybb->input['template']) {
             // get the total count
             $query = $db->write_query("SELECT count(e.eid) as total from `{$db->table_prefix}threadlogentry` as e
                 left join `{$db->table_prefix}threads` as t on t.tid=e.tid
@@ -619,7 +620,7 @@ function json_threadlog_reorder() {
                 where t.visible and f.threadlog_include and e.uid={$entry_to_swap['uid']}");
             $count_total = $db->fetch_field($query, 'count');
             $template_row = threadlog_row_template_values($entry_to_swap,
-                ($mybb->input['first'] ? 0 : $mybb->settings['threadlog_perpage']),
+                ($mybb->input['template'] == 'up' ? 0 : $mybb->settings['threadlog_perpage']),
                 null,
                 $count_total
             );
