@@ -14,12 +14,14 @@ jQuery(() => {
     $('#cancel-threadlog-btn').show();
   });
 
-  $('#cancel-threadlog-btn').click(() => {
+  $('#cancel-threadlog-btn').click((e) => {
+    e.preventDefault();
     exitEditMode();
     removeEdits();
   });
 
-  $('#save-threadlog-btn').click(() => {
+  $('#save-threadlog-btn').click((e) => {
+    e.preventDefault();
     exitEditMode();
     saveEdits();
   });
