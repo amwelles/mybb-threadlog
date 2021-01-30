@@ -38,7 +38,7 @@ function threadlog_install()
     global $db, $mybb;
 
     // alter the forum table
-    $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` ADD `threadlog_include` TINYINT( 1 ) NOT NULL DEFAULT '1'");
+    $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` ADD `threadlog_include` TINYINT( 1 ) NOT NULL DEFAULT '0'");
 
     // add table for threadlog entries per user
     $db->write_query("CREATE TABLE `". $db->table_prefix ."threadlogentry` (
