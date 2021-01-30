@@ -444,7 +444,7 @@ function threadlog() {
     $query = $db->write_query("SELECT
         count(e.eid) as total,
         count(case t.closed when 1 then 1 else null end) as closed_num,
-        count(case when (t.closed!=1 and t.lastposteruid!=1) then 1 else null end) as replies,
+        count(case when (t.closed!=1 and t.lastposteruid!={$uid}) then 1 else null end) as replies,
         u.username
         from `{$db->table_prefix}threadlogentry` as e
         left join `{$db->table_prefix}threads` as t on t.tid=e.tid
