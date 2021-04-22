@@ -6,16 +6,17 @@ if(!defined("IN_MYBB"))
     die("Direct initialization of this file is not allowed.");
 }
 
+define('PLUGIN_THREADLOG_ROOT', MYBB_ROOT . 'inc/plugins/threadlog');
 
 function threadlog_info()
 {
     return array(
         "name"          => "Threadlog",
-        "description"   => "Creates a threadlog for users",
+        "description"   => "Creates a reorderable threadlog for users",
         "website"       => "http://autumnwelles.com/",
         "author"        => "Autumn Welles",
         "authorsite"    => "http://autumnwelles.com/",
-        "version"       => "3.0",
+        "version"       => "4.0",
         "guid"          => "",
         "codename"      => "threadlog+",
         "compatibility" => "18*"
@@ -33,25 +34,9 @@ function array_from_field($query_result, $field) {
     return $items;
 }
 
-function threadlog_install()
+function threadlog_generate_entries()
 {
-    global $db, $mybb;
-
-    // alter the forum table
-    $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` ADD `threadlog_include` TINYINT( 1 ) NOT NULL DEFAULT '1'");
-
-    // add table for threadlog entries per user
-    $db->write_query("CREATE TABLE `". $db->table_prefix ."threadlogentry` (
-        eid INT(10) UNSIGNED NOT NULL auto_increment,
-        tid INT(10) UNSIGNED NOT NULL DEFAULT 0,
-        uid INT(10) UNSIGNED NOT NULL DEFAULT 0,
-        roworder INT(7) UNSIGNED NOT NULL DEFAULT 0,
-        description TEXT,
-        KEY(tid),
-        KEY(uid),
-        PRIMARY KEY(eid)
-    )");
-
+    global $db;
     // get all the user/thread participation instances sorted by date
     $query = $db->write_query("SELECT DISTINCT posts.tid, posts.uid, threads.dateline
         FROM `". $db->table_prefix ."posts` AS posts
@@ -74,8 +59,32 @@ function threadlog_install()
         ];
     }
     $db->insert_query_multiple('threadlogentry', $queries);
+}
 
-    // make a settings group
+function threadlog_install()
+{
+    global $db, $mybb;
+
+    require_once(PLUGIN_THREADLOG_ROOT . '/templates.php');
+
+    // alter the forum table
+    $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` ADD `threadlog_include` TINYINT( 1 ) NOT NULL DEFAULT '1'");
+
+    // add table for threadlog entries per user
+    $db->write_query("CREATE TABLE `". $db->table_prefix ."threadlogentry` (
+        eid INT(10) UNSIGNED NOT NULL auto_increment,
+        tid INT(10) UNSIGNED NOT NULL DEFAULT 0,
+        uid INT(10) UNSIGNED NOT NULL DEFAULT 0,
+        roworder INT(7) UNSIGNED NOT NULL DEFAULT 0,
+        description TEXT,
+        KEY(tid),
+        KEY(uid),
+        PRIMARY KEY(eid)
+    )");
+
+    threadlog_generate_entries();
+
+    // settings
     $setting_group = array(
         'name' => 'threadlog_settings',
         'title' => 'Threadlog Settings',
@@ -83,133 +92,41 @@ function threadlog_install()
         'disporder' => 5,
         'isdefault' => 0,
     );
-
-    // get the settings group ID
     $gid = $db->insert_query("settinggroups", $setting_group);
-
-    // define the settings
-    $settings_array = array(
-        'threadlog_perpage' => array(
+    $settings_array = [
+        [
+            'name' => 'threadlog_perpage',
             'title' => 'Threads per page',
             'description' => 'Enter the number of threads that should display per page.',
             'optionscode' => 'text',
             'value' => 50,
             'disporder' => 2,
-        ),
-        'threadlog_reorder' => array(
+            'gid' => $gid
+        ],
+        [   'name' => 'threadlog_reorder',
             'title' => 'Threadlog reordering',
             'description' => 'Allow users to reorder their threads in the threadlog',
             'optionscode' => 'onoff',
             'value' => true,
-            'disporder' => 3
-        ),
-    );
-
-    // add the settings
-    foreach($settings_array as $name => $setting)
-    {
-        $setting['name'] = $name;
-        $setting['gid'] = $gid;
-        $db->insert_query('settings', $setting);
-    }
-
-    // rebuild
+            'disporder' => 3,
+            'gid' => $gid
+        ]
+    ];
+    $db->insert_query_multiple('settings', $settings_array);
     rebuild_settings();
 
-    // TEMPLATES
-
-    // define the page template
-    //todo: only show actions if it's this user's threadlog
-    $threadlog_page = '<html>
-<head>
-    <title>{$mybb->settings[\'bbname\']} - {$username}\'s Threadlog</title>
-    {$headerinclude}
-        <link rel="stylesheet" href="{$mybb->settings[\'bburl\']}/inc/plugins/threadlog/threadlog-reorder.min.css">
-    </head>
-<body>
-    {$header}
-
-    {$multipage}
-
-        <table id="threadlog" class="tborder" border="0" cellpadding="{$theme[\'tablespace\']}" cellspacing="{$theme[\'borderwidth\']}">
-            <thead>
-                <tr>
-                    <td class="thead" colspan="{$threadlog_columns}">{$username}\'s Threadlog &middot; <a href="{$mybb->settings[\'bburl\']}/member.php?action=profile&uid={$uid}">View Profile</a>{$threadlog_buttons}</td>
-                </tr>
-                <tr>
-                    <td class="tcat">Thread</td>
-                    <td class="tcat" align="center">Participants</td>
-                    <td class="tcat" align="center">Posts</td>
-                    <td class="tcat" align="right">Last Post</td>
-                    {$actions_header}
-                </tr>
-            </thead>
-            <tbody>
-                {$threadlog_list}
-            </tbody>
-            <tfoot>
-                <tr><td class="tfoot" colspan="{$threadlog_columns}" align="center">
-                <a href="#" id="active">{$count_active} active</a> &middot;
-                <a href="#" id="closed">{$count_closed} closed</a> &middot;
-                <a href="#" id="need-replies">{$count_replies} need replies</a> &middot;
-                <a href="#" id="show-all">{$count_total} total</a>
-                </td></tr>
-            </tfoot>
-        </table>
-
-    {$multipage}
-
-    {$footer}
-    <script type="text/javascript" src="{$mybb->settings[\'bburl\']}/inc/plugins/threadlog/threadlog.js"></script>
-    {$reorderscript}
-</body>
-</html>';
-
-    // create the page template
-    $insert_array = array(
-        'title' => 'threadlog_page',
-        'template' => $db->escape_string($threadlog_page),
-        'sid' => '-1',
-        'version' => '',
-        'dateline' => time(),
-    );
-
-    // insert the page template into DB
-    $db->insert_query('templates', $insert_array);
-
-    // define the row template
-    $threadlog_row = '<tr class="{$thread_status}" data-entry="{$eid}"><td class="{$thread_row}">{$thread_prefix} {$thread_title}<div class="smalltext">on {$thread_date}</small></td>
-    <td class="{$thread_row}" align="center">{$thread_participants}</td>
-    <td class="{$thread_row}" align="center"><a href="javascript:MyBB.whoPosted({$tid});">{$thread_posts}</a></td>
-    <td class="{$thread_row}" align="right">Last post by {$thread_latest_poster}<div class="smalltext">on {$thread_latest_date}</div></td>{$thread_reorder_actions}</tr>';
-
-    // create the row template
-    $insert_array = array(
-        'title' => 'threadlog_row',
-        'template' => $db->escape_string($threadlog_row),
-        'sid' => '-1',
-        'version' => '',
-        'dateline' => time(),
-    );
-
-    // insert the list row into DB
-    $db->insert_query('templates', $insert_array);
-
-    // define the row template
-    $threadlog_nothreads = '<tr><td colspan="{$threadlog_columns}">No threads to speak of.</td></tr>';
-
-    // create the row template
-    $insert_array = array(
-        'title' => 'threadlog_nothreads',
-        'template' => $db->escape_string($threadlog_nothreads),
-        'sid' => '-1',
-        'version' => '',
-        'dateline' => time(),
-    );
-
-    // insert the list row into DB
-    $db->insert_query('templates', $insert_array);
-
+    // templates
+    $template_queries = [];
+    foreach ($templates as $name => $template) {
+        $template_queries[] = [
+            'title' => 'threadlog_'.$name,
+            'template' => $db->escape_string($template),
+            'sid' => '-1',
+            'version' => '',
+            'dateline' => time(),
+        ];
+    }
+    $db->insert_query_multiple('templates', $template_queries);
 }
 
 function threadlog_is_installed()
@@ -227,11 +144,10 @@ function threadlog_uninstall()
     global $db;
 
     $db->drop_table("threadlogentry");
-    $db->write_query("ALTER TABLE `". $db->table_prefix ."forums` DROP `threadlog_include`;");
-    $db->delete_query('settings', "name IN ('threadlog_perpage', 'threadlog_reorder')");
+    $db->drop_column("forums", "threadlog_include");
+    $db->delete_query('settings', "name LIKE 'threadlog%'");
     $db->delete_query('settinggroups', "name = 'threadlog_settings'");
-    $db->delete_query("templates", "title IN ('threadlog_page','threadlog_row','threadlog_nothreads')");
-
+    $db->delete_query("templates", "title LIKE 'threadlog%' AND AND sid='-2'");
     rebuild_settings();
 }
 
@@ -248,10 +164,12 @@ function threadlog_deactivate()
 /**
  * Create a threadlog entry if one doesn't exist yet
  */
-function create_threadlog_entry($uid, $tid, $skip_checks = false) {
+function create_threadlog_entry($uid, $tid) {
     global $db;
+    $tid = $db->escape_string($tid);
+    $uid = $db->escape_string($uid);
     //check if it already exists
-    $query = $db->simple_select('threadlogentry', 'eid', 'tid='.$tid);
+    $query = $db->simple_select('threadlogentry', 'eid', 'tid='.$tid.' and uid='.$uid);
     if ($db->num_rows($query)) return;
 
     // update the other ones
@@ -261,14 +179,57 @@ function create_threadlog_entry($uid, $tid, $skip_checks = false) {
     $db->insert_query('threadlogentry', ['uid' => $uid, 'tid' => $tid, 'roworder' => '0']);
 }
 
+$plugins->add_hook('admin_config_plugins_begin', 'threadlog_regen_entries');
+function threadlog_regen_entries()
+{
+    global $db, $mybb;
+    if ($mybb->input['module'] != 'config-plugins' || $mybb->input['action'] != "regen_threadlogs") {
+        return;
+    }
+    $db->delete_query('threadlogentry');
+    threadlog_generate_entries();
+
+    flash_message("Threadlogs regenerated", "success");
+    admin_redirect("index.php?module=config-plugins");
+}
+
 // hook into new post/new thread
 // add a threadlog entry if one doesn't exist
 $plugins->add_hook('datahandler_post_insert_thread_end', 'threadlog_new_post_or_thread');
 $plugins->add_hook('datahandler_post_insert_post_end', 'threadlog_new_post_or_thread');
 function threadlog_new_post_or_thread(&$datahandler)
 {
-    create_threadlog_entry($datahandler->post_insert_data['uid'], $datahandler->post_insert_data['tid']);
+    global $mybb;
+    $uid = $datahandler->post_insert_data['uid'] ? $datahandler->post_insert_data['uid'] : $mybb->user['uid'];
+    $tid = $datahandler->post_insert_data['tid'] ? $datahandler->post_insert_data['tid'] : $mybb->input['tid'];
+    create_threadlog_entry($uid, $tid);
 }
+
+$plugins->add_hook('editpost_start', 'threadlog_handle_authorswitch');
+function threadlog_handle_authorswitch()
+{
+    global $mybb, $db;
+    $newuid = $mybb->get_input('authorswitch', MyBB::INPUT_INT);
+    if (!$newuid) return;
+
+    $pid = $mybb->get_input('pid', MyBB::INPUT_INT);
+    $post = get_post($pid);
+
+    // check if the old user still has posts in the thread
+    $query = $db->write_query("SELECT distinct uid from `{$db->table_prefix}posts`
+        WHERE tid={$post['tid']} AND pid !={$pid}");
+    $delete_entry = true;
+    while ($row = $db->fetch_array($query)) {
+        // if the participant still has posts in the thread, do nothing
+        if ($row['uid'] === $post['uid']) $delete_entry = false;
+    }
+    if ($delete_entry) {
+        $db->delete_query('threadlogentry', "tid={$post['tid']} AND uid={$post['uid']}");
+    }
+    // create an entry if one doesn't exist yet
+    create_threadlog_entry($newuid, $post['tid']);
+}
+
 
 
 // hook into post delete
@@ -276,18 +237,22 @@ function threadlog_new_post_or_thread(&$datahandler)
 $plugins->add_hook('class_moderation_delete_post_start', 'threadlog_delete_post');
 function threadlog_delete_post(&$pid) {
     global $db;
+    $pid = $db->escape_string($pid);
     // get the post
     $query = $db->simple_select('posts', 'uid, tid', 'pid='.$pid);
     $post = $db->fetch_array($query);
+    $db->free_result($query);
+    //var_dump($post);
     // get the thread participants
     $query = $db->write_query("SELECT distinct uid from `{$db->table_prefix}posts`
-        WHERE tid={$post['tid']}) AND pid != {$pid}");
-    $rows = $db->fetch_array($query);
-    foreach ($rows as $row) {
+        WHERE tid={$post['tid']} AND pid !={$pid}");
+    while ($row = $db->fetch_array($query)) {
         // if the participant still has posts in the thread, do nothing
         if ($row['uid'] === $post['uid']) return;
     }
+    //echo 'deleting threadlogentry';
     $db->delete_query('threadlogentry', "tid={$post['tid']} AND uid={$post['uid']}");
+    //echo 'done';
 }
 
 // delete the threadlog entry for all users
@@ -302,7 +267,7 @@ $plugins->add_hook('datahandler_user_delete_posts', 'threadlog_delete_user');
 function threadlog_delete_user(&$datahandler) {
     global $db;
     if (empty($datahandler->delete_uids)) return;
-    $db->delete_query('threadlogentry', "uid IN {$datahandler->delete_uids}");
+    $db->delete_query('threadlogentry', "uid IN ({$datahandler->delete_uids})");
 }
 
 /**
@@ -345,7 +310,7 @@ function get_thread_participants($uid) {
  */
 function threadlog_row_template_values($thread, $entry_count, $participants_by_tid = null, $count_total)
 {
-    global $mybb, $db;
+    global $mybb, $db, $templates;
     $return_values = [];
 
     $return_values['uid'] = $uid = $thread['uid'];
@@ -396,13 +361,17 @@ function threadlog_row_template_values($thread, $entry_count, $participants_by_t
     }
 
     // set up thread reorder actions
-    $return_values['thread_reorder_actions'] = '';
-    if ($mybb->user['uid'] === $uid && intval($mybb->settings['threadlog_reorder']) === 1) {
-        $return_values['thread_reorder_actions'] = '<td class="'.$return_values['thread_row'].'" align="right"><select class="threadrow-reorder">'.
+    if ($mybb->user['uid'] == $uid && intval($mybb->settings['threadlog_reorder']) == 1) {
+        $threadrow = $return_values['thread_row'];
+        $thread_actions = '<select class="threadrow-reorder">'.
             '<option value="">Reorder</option>'.
             (intval($thread['roworder']) !== 0 ? '<option value="up">Move Up</option>' : '').
-            (intval($thread['roworder']) !== $count_total - 1 ?'<option value="down">Move Down</option></select></td>' : '');
-    }
+            (intval($thread['roworder']) !== $count_total - 1 ?'<option value="down">Move Down</option>' : '')
+            .'</select>';
+        eval('$return_values[\'thread_reorder_actions\'] = "'.$templates->get('threadlog_row_actions').'";');
+    } else {
+		$return_values['thread_reorder_actions'] = '';
+	}
     return $return_values;
 }
 
@@ -423,7 +392,7 @@ function threadlog() {
 
     // check for a UID
     if(isset($mybb->input['uid'])){
-        $uid = intval($mybb->input['uid']);
+        $uid = $mybb->get_input('uid', MyBB::INPUT_INT);
     } elseif(isset($mybb->user['uid'])) {
         $uid = $mybb->user['uid'];
     } else {
@@ -440,16 +409,14 @@ function threadlog() {
         $start = 0;
         $page = 1;
     }
-    // get the total, counts, and the username
+    // get the total counts
     $query = $db->write_query("SELECT
         count(e.eid) as total,
         count(case t.closed when 1 then 1 else null end) as closed_num,
-        count(case when (t.closed!=1 and t.lastposteruid!=1) then 1 else null end) as replies,
-        u.username
+        count(case when (t.closed!=1 and t.lastposteruid!={$uid}) then 1 else null end) as replies
         from `{$db->table_prefix}threadlogentry` as e
         left join `{$db->table_prefix}threads` as t on t.tid=e.tid
         left join `{$db->table_prefix}forums` as f on f.fid=t.fid
-        left join `{$db->table_prefix}users` as u on u.uid=e.uid
         where e.uid={$uid} and f.threadlog_include=1 and t.visible");
 
     $counts = $db->fetch_array($query);
@@ -457,8 +424,12 @@ function threadlog() {
     $count_closed = $counts['closed_num'];
     $count_replies = $counts['replies'];
     $count_active = $count_total - $count_closed;
-    // make sure single quotes are replaced so we don't muck up queries
-    $username = str_replace("'", "&#39;", $counts['username']);
+
+    $query = $db->simple_select("users", 'username,displayname', 'uid='.$uid);
+    if ($db->num_rows($query)) {
+        $user = $db->fetch_array($query);
+        $username = $user['displayname'] ? $user['displayname'] : $user['username'];
+    }
 
     // add the breadcrumb
     add_breadcrumb($username .'\'s Threadlog', "misc.php?action=threadlog");
@@ -478,10 +449,10 @@ function threadlog() {
     $reorderscript = '';
     if ($mybb->user['uid'] === $uid && intval($mybb->settings['threadlog_reorder']) === 1) {
         $threadlog_columns = '5';
-        $actions_header = '<td class="tcat" align="right">Actions</td>';
+        eval("\$actions_header = \"".$templates->get("threadlog_actions_header")."\";");
         $reorderscript = "<script type=\"text/javascript\" src=\"{$mybb->settings['bburl']}/inc/plugins/threadlog/jquery-ui.min.js\"></script>".
         "<script type=\"text/javascript\" src=\"{$mybb->settings['bburl']}/inc/plugins/threadlog/threadlog-reorder.js\"></script>";
-        $threadlog_buttons = " <div class=\"postbit_buttons\"><a href=\"#\" id=\"edit-threadlog-btn\">Edit</a><a href=\"#\" id=\"save-threadlog-btn\" style=\"display: none\">Save</a><a href=\"#\" id=\"cancel-threadlog-btn\" style=\"display: none\">Cancel</a></div>";
+        $threadlog_buttons = "<div class=\"postbit_buttons\"><a href=\"#\" id=\"edit-threadlog-btn\">Edit</a><a href=\"#\" id=\"save-threadlog-btn\" style=\"display: none\">Save</a><a href=\"#\" id=\"cancel-threadlog-btn\" style=\"display: none\">Cancel</a></div>";
     } else {
         $threadlog_columns = '4';
     }
@@ -599,8 +570,8 @@ function json_threadlog_reorder() {
             WHERE t.visible=1 and f.threadlog_include=1 and roworder ".($direction === 'up' ? '<' : '>')."
                 (SELECT roworder from `{$db->table_prefix}threadlogentry` WHERE eid={$eid})
             ORDER BY roworder ".($direction === 'up' ? 'DESC' : 'ASC')."
-            LIMIT 1");
-        // todo: this is triggering, check the query above
+			LIMIT 1");
+
         // don't let the user try to move the first or last one up/down
         if (!$db->num_rows($query)) json_response(403, "Failed to move {$eid}");
 
